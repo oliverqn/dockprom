@@ -7,7 +7,6 @@ networks:
 volumes:
     prometheus_data: {}
     grafana_data: {}
-    portainer_data: {}
 
 services:
 
@@ -95,12 +94,10 @@ services:
       - ./grafana/dashboards:/etc/grafana/dashboards
       - ./grafana/setup.sh:/setup.sh
     entrypoint: /setup.sh
-    user: root
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://ubuntu.localdomain:8090/grafana/
     restart: unless-stopped
     expose:
       - 3000
@@ -120,29 +117,21 @@ services:
     labels:
       org.label-schema.group: "monitoring"
 
-  portainer:
-    image: portainer/portainer
-    container_name: portainer
-    restart: unless-stopped
-    expose:
-      - 9000
-    networks:
-      - monitor-net
-    labels:
-      org.label-schema.group: "controling"
-    volumes:
-      - portainer_data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
-  
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    restart: unless-stopped
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/vhost.conf
-    networks:
-      - monitor-net
+  caddy:
+    image: stefanprodan/caddy
+    container_name: caddy
     ports:
-      - "8090:80"
+      - "3000:3000"
+      - "9090:9090"
+      - "9093:9093"
+      - "9091:9091"
+    volumes:
+      - ./caddy/:/etc/caddy/
+    environment:
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    restart: unless-stopped
+    networks:
+      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
